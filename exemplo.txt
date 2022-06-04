@@ -1,3 +1,31 @@
 {dhasjfdfhsuifhadusfh uih uieghuqweuehghiushduihuidfhsufhdsu
    {sla}
 }
+@x
+x@
+(abc)
++
+-
+*
+/
+.
+,
+;
+=
+:
+:=
+<
+<>
+<=
+>
+>=
+var kleber
+_var
+var otavio
+99
+5.1
+-2
++7
+9h6
+9.87h1
+1;

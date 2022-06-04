@@ -1,3 +1,36 @@
-Erro! Comentário não finalizado!
-Deu bom!
-Erro! Comentário não aberto!
+program -> simb_program
+p -> id
+; -> simb_pv
+var -> simb_var
+x -> id
+@ -> (ERRO, CARACTER INVALIDO)
+: -> simb_dp
+integer -> simb_integer
+; -> simb_pv
+begin -> simb_begin
+x -> id
+:= -> simb_atrib
+- -> simb_menos
+1 -> simb_num
+; -> simb_pv
+x -> id
+:= -> simb_atrib
+x -> id
+- -> simb_menos
+1 -> simb_num
+; -> simb_pv
+while -> simb_while
+( -> simb_par
+x -> id
+< -> simb_menor
+3 -> simb_num
+) -> simb_fpar
+do -> simb_do
+x -> id
+:= -> simb_atrib
+x -> id
++ -> simb_mais
+1 -> simb_num
+; -> simb_pv
+end -> simb_end
+. -> simb_ponto
