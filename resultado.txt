@@ -3,7 +3,7 @@ p -> id
 ; -> simb_pv
 var -> simb_var
 x -> id
-@ -> (ERRO, CARACTER INVALIDO)
+@ -> (ERRO, CARACTER INVALIDO) - LINHA 3
 : -> simb_dp
 integer -> simb_integer
 ; -> simb_pv
