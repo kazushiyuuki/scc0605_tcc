@@ -1,7 +1,9 @@
 #include "automatos.h"
 
+// Inicia o vetor de palavras reservadas
 char reservadas[NUM_RESERVADAS][MAX_TAMANHO] = {""};
 
+// Preenche o valor dos possiveis operadores
 char simb_operadores[] = {'+',
                           '-',
                           '*',
@@ -13,48 +15,75 @@ char simb_operadores[] = {'+',
                           '(',
                           ')'};
 
+// Preenche o valor dos possiveis operadores especiais
 char simb_operadores_especiais[] = {':',
                                     '<',
                                     '>'};
 
+/* 
+    Funcao que seleciona qual automato deve ser acionado
+    Params:
+        - str: linha do arquivo de entrada
+        - resultado: ponteiro para o arquivo de saída
+        - linha: numero da linha do arquivo de entrada
+*/
 void lexico(char *str, FILE *resultado, int linha)
 {
+    // Preenche com as palavras reservadas
     salvaReservadas();
+    // i indica o caracter da linha do arquivo de entrada
+    // numero salva se o caracter eh um numero ou nao
     int i = 0, numero;
+    // Loop para percorrer a linha
     while (str[i] != '\0')
     {
-
+        // Consome os espaços nas linhas e o \n caso haja no final
         if (str[i] == ' ' || str[i] == '\n')
         {
             i++;
         }
+        // Caso identifique um comentario, aciona o automato de comentario
         else if (str[i] == '{' || str[i] == '}')
         {
             i = comentario(str, i, resultado, linha);
         }
-        // automato numero
+        // Caso identifique um numero, aciona o automato de numero
         else if ((numero = indentificaNumero(str[i])) == 1)
         {
-            i = automatoNumeros(str, i, resultado);
+            i = automatoNumeros(str, i, resultado, linha);
         }
+        // Caso identifique um operador, aciona o automato de operador
         else if (eh_operador(str[i]) != 0)
         {
             i = operadores(str, i, resultado);
         }
-        // automato identificador e reservada
+        // Caso nenhum anterior seja acionado, aciona o automato de identificador
         else
         {
-            i = automatoIdentificadores(str, i, resultado);
+            i = automatoIdentificadores(str, i, resultado, linha);
         }
     }
 }
 
+/*
+    Funcao que implementa o automato de comentario
+    Params:
+        - str: linha do arquivo de entrada
+        - i: indica o caracter atual de str a ser lido
+        - resultado: ponteiro para o arquivo de saida
+        - linha: numero da linha do arquivo de entrada
+    Return:
+        Inteiro com a posicao do proximo caracter a ser consumido
+*/
 int comentario(char *str, int i, FILE *resultado, int linha)
 {
+    // Testa se o comentario foi aberto
     if (str[i] == '{')
     {
+        // Consome todos os caracteres ate chegar no fim da linha ou do comentario
         while (str[i] != '}' && str[i] != '\n' && str[i] != '\0')
             i++;
+        // Caso nao haja um fecha chaves para finalizar o comentario
         if (str[i] != '}')
         {
             fprintf(resultado, "(ERRO, COMENTARIO NAO FINALIZADO) - LINHA %d\n", linha);
@@ -68,9 +97,23 @@ int comentario(char *str, int i, FILE *resultado, int linha)
     return i;
 }
 
+/*
+    Funcao que implementa o automato de operadores
+    Params:
+        - str: linha do arquivo de entrada
+        - i: indica o caracter atual de str a ser lido
+        - resultado: ponteiro para o arquivo de saida
+    Return:
+        Inteiro com a posicao do proximo caracter a ser consumido
+*/
 int operadores(char *str, int i, FILE *resultado)
 {
+    // Verifica se eh um operador
+    // De 10 a 19, operador comum
+    // De 20 a 22, operador especial
     int operador = eh_operador(str[i]);
+    
+    // Identifica o caracter
     switch (operador)
     {
     case 10:
@@ -139,6 +182,7 @@ int operadores(char *str, int i, FILE *resultado)
 
     case 21:
         i++;
+        // Verifica o proximo caracter para saber se eh um operador composto por dois caracteres
         if (str[i] == '=')
         {
             fprintf(resultado, "%c= -> simb_menor_igual\n", str[i - 1]);
@@ -173,17 +217,40 @@ int operadores(char *str, int i, FILE *resultado)
     }
 }
 
-int automatoIdentificadores(char palavra[], int i, FILE *ponteiro_saida)
+/*
+    Funcao que implementa o automato de identificadores
+    Params:
+        - palavra: linha do arquivo de entrada
+        - i: indica o caracter atual de str a ser lido
+        - ponteiro_saida: ponteiro para o arquivo de saida
+        - linha: numero da linha do arquivo de entrada
+    Return:
+        Inteiro com a posicao do proximo caracter a ser consumido
+*/
+int automatoIdentificadores(char palavra[], int i, FILE *ponteiro_saida, int linha)
 {
-    // Variaveis
-    int inicio = i, verifica;
+    // inicio salva a posicao do caracter inicial para saber onde comeca o identificador
+    int inicio = i;
+    /* 
+        - j: variavel para usar nos "for"
+        - flag: guarda o estado do automato
+            0 - estado inicial
+            1 - caso a primeira letra esteja correta
+            2 - caso tenha um caracter no meio do indetificador que seja invalido
+            3 - caracter invalido logo no inicio
+        - flag_reservada: armazena se a palavra eh reservada 
+        - cont_vet: serve para copiar o identificador
+    */
     int j, flag = 0, flag_reservada = 0, cont_vet = 0;
+    // tipo palavra armazena o identificador
     char tipo_palavra[MAX_TAMANHO] = "";
+    // c recebe o char a ser consumido pelo automato
     char c = palavra[i];
 
-    // Comeca o processo de ler a palavra
+    // Loop que para de ler o identificador
     while (c != ' ' && c != '\n' && c != '\0')
     {
+        // Identifica o estado 
         switch (flag)
         {
         case 0: // verifica a primeira letra
@@ -209,18 +276,19 @@ int automatoIdentificadores(char palavra[], int i, FILE *ponteiro_saida)
             }
             break;
         case 2: // ERRO
-            i--;
+            i--; // retrocede
             break;
 
-        case 3: // primeiro errado
+        case 3: // primeiro errado, imprime erro
             i--;
-            fprintf(ponteiro_saida, "%c -> (ERRO, CARACTER INVALIDO)\n", palavra[i]);
+            fprintf(ponteiro_saida, "%c -> (ERRO, CARACTER INVALIDO) - LINHA %d\n", palavra[i], linha);
             i++;
             return i;
 
         default:
             break;
         }
+        // Consome o resto caso nao tenha erro 
         if (flag != 2)
         {
             i++;
@@ -232,12 +300,13 @@ int automatoIdentificadores(char palavra[], int i, FILE *ponteiro_saida)
             break;
         }
     }
+
+    // Copia o identificador para tipo_palavra
     for (j = inicio; j < i; j++)
     {
         tipo_palavra[cont_vet++] = palavra[j];
     }
-
-    tipo_palavra[i] = '\0';
+    tipo_palavra[cont_vet] = '\0';
 
     // Verifica se e reservada ou nao
     if (flag != 2 && flag != 3)
@@ -257,37 +326,63 @@ int automatoIdentificadores(char palavra[], int i, FILE *ponteiro_saida)
             strcat(tipo_palavra, " -> id\n");
         }
     }
+    // Caso haja erro
     else
-    {
-        strcat(tipo_palavra, " -> (ERRO, PALAVRA INVALIDA)\n");
+    {   
+        char msg_erro[50];
+        snprintf(msg_erro, sizeof(msg_erro), " -> (ERRO, PALAVRA INVALIDA) - LINHA %d\n", linha);
+        strcat(tipo_palavra, msg_erro);
     }
     fputs(tipo_palavra, ponteiro_saida);
 
     return i;
 }
 
-int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida)
+/*
+    Funcao que implementa o automato de numeros
+    Params:
+        - palavra: linha do arquivo de entrada
+        - i: indica o caracter atual de str a ser lido
+        - ponteiro_saida: ponteiro para o arquivo de saida
+        - linha: numero da linha do arquivo de entrada
+    Return:
+        Inteiro com a posicao do proximo caracter a ser consumido
+*/
+int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida, int linha)
 {
 
-    // Variaveis
+     /* 
+        - j: variavel para usar nos "for"
+        - inicio: salva a posicao do caracter inicial para saber onde comeca o numero
+        - cont_vet: serve para copiar o identificador
+        - flag: guarda o estado do automato
+            0 - estado inicial
+            1 - caracter nao eh um numero
+            2 - primero caracter eh um numero inicial
+            3 - possui parte decimal
+        - flag_operador: armazena se o caracter eh um operador
+        - c: caracter atual do numero
+        - tipo_palavra: armazena o numero inteiro
+    */
     int j, inicio = i, cont_vet = 0;
     int flag = 0, flag_operador = 0;
     char c = palavra[i];
     char tipo_palavra[MAX_TAMANHO];
 
+    // Loop enquanto não chegar no fim do numero ou identificar um operador
     while (c != ' ' && c != '\n' && c != '\0' && (flag_operador == 0))
     {
         switch (flag)
         {
         // primeiro caracter
         case 0:
-            if (c == '+' || c == '-' || (c >= '0' && c <= '9'))
+            if (c >= '0' && c <= '9')
             {
-                flag = 2;
+                flag = 2; // primeiro numero ok
             }
             else
             {
-                flag = 1;
+                flag = 1; // caracter invalido
             }
 
             break;
@@ -300,7 +395,7 @@ int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida)
         // caracter numero ou inicio da parte decimal
         case 2:
             if ((c >= '0' && c <= '9'))
-                flag = 2;
+                flag = 2; 
             else if (c == '.')
                 flag = 3;
             else
@@ -318,9 +413,13 @@ int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida)
         default:
             break;
         }
+        // caso seja um caracter invalido, verifica se eh um identificador
+        // se nao for, continua lendo o numero
+        // se for para o automato para que o o automato de operador assuma
         if (flag == 1 && eh_operador(c) != 0)
         {
             flag_operador = 1;
+            // muda flag para identificar o numero antes do operador
             flag = -1;
         }
         else
@@ -330,16 +429,19 @@ int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida)
         }
     }
 
-    // TODO: implementar a string de saida
+    //  Copia o numero para tipo_palavra
     for (j = inicio; j < i; j++)
     {
         tipo_palavra[cont_vet++] = palavra[j];
     }
-
     tipo_palavra[cont_vet] = '\0';
+
+    // Testa se eh uma numero invalido
     if (flag == 1)
     {
-        strcat(tipo_palavra, " -> (ERRO, NUMERO INVALIDO)\n");
+        char msg_erro[50];
+        snprintf(msg_erro, sizeof(msg_erro), " -> (ERRO, NUMERO INVALIDO) - LINHA %d\n", linha);
+        strcat(tipo_palavra, msg_erro);
         fputs(tipo_palavra, ponteiro_saida);
     }
     else
@@ -350,23 +452,46 @@ int automatoNumeros(char palavra[], int i, FILE *ponteiro_saida)
     return i;
 }
 
+/* 
+    Funcao que verifica se um caracacter eh um operador
+    Params:
+        - c: char a ser verificado
+    Return:
+        Inteiro da seguinte forma:
+            0 - nao eh um operador
+            10 a 19 - operador comum
+            20 a 22 - operador especial que pode ser formado por dois caracteres
+*/
 int eh_operador(char c)
 {
+    // Verifica se o caracter esta no vetor de operadores comuns
     for (int i = 0; i < 10; i++)
     {
         if (c == simb_operadores[i])
             return 10 + i;
     }
+    // Verifica se o caracter esta no vetor de operadores especiais
     for (int i = 0; i < 3; i++)
     {
         if (c == simb_operadores_especiais[i])
             return 20 + i;
     }
+    // Caso nao seja um operador
     return 0;
 }
 
+/*
+    Funcao que identifica se um caracter eh um numero
+    Params:
+        - c: caracter a ser verificado
+    Return:
+        Inteiro da seguinte forma:
+            1 - eh um numero
+            0 - nao eh um numero
+*/
 int indentificaNumero(char c)
 {
+    // Verifica se eh um numero de acordo com o decimal da tabela ascii
     for (int i = 48; i < 58; i++)
     {
         if (c == i)
@@ -374,13 +499,8 @@ int indentificaNumero(char c)
     }
     return 0;
 }
-int identificaCaracterValido(char c)
-{
-    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || (c != '_'))
-        return 1;
-    return 0;
-}
 
+// Funcao que armazena as palavras reservadas
 void salvaReservadas()
 {
     strcpy(reservadas[0], "program");
